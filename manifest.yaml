@@ -76,7 +76,7 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: nodejs-service
+  name: backend-svc
   namespace: ui-${BRANCH}
 spec:
   selector:
