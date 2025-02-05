@@ -8,22 +8,25 @@ build_backend_dev:
   stage: build
   image:
     name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""]
+    entrypoint: [""]  # Don't override the entrypoint
   environment:
     name: development
   tags:
     - akeso-sk
   script:
-   - echo "Building backend docker image"
-   - export IMAGE_TAG="$(date +%Y%m%d%H%M)"
-   - echo "IMAGE_TAG=${IMAGE_TAG}" > .env
-   - mkdir -p /kaniko/.docker
-   - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
-   - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
-   - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
-   - echo "Retagging the backend image to 2025 and pushing to ACR"
-   - docker tag "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}" "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
-   - docker push "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
+    - echo "Building backend docker image"
+    - export IMAGE_TAG="$(date +%Y%m%d%H%M)"
+    - echo "IMAGE_TAG=${IMAGE_TAG}" > .env
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
+    
+    # First push with the dynamic IMAGE_TAG
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+    
+    # Second push with the static "2025" tag
+    - echo "Retagging and pushing the image to ACR with tag 2025"
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
 
   artifacts:
     paths:
