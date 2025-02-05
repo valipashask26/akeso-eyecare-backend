@@ -42,8 +42,6 @@ deploy_backend_dev:
     - echo "Deploying the backend application to Kubernetes"
     - mkdir -p ~/.kube
     - echo "$KUBECONFIG" | base64 -d > ~/.kube/config
-    - cat ~/.kube/config
-    - kubectl get pods -A
   script:
     - echo "Loading the IMAGE_TAG from .env"
     - source .env  # Load IMAGE_TAG from the artifact
