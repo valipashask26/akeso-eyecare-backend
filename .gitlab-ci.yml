@@ -21,11 +21,17 @@ build_backend_dev:
     - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
     - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+    - echo "Retagging the backend image to 2025 and pushing to ACR"
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
+
+
   artifacts:
     paths:
       - .env  # Upload .env file as artifact to be used in deploy stage
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
+
 
 
 deploy_backend_dev:
@@ -43,10 +49,21 @@ deploy_backend_dev:
     - kubectl get pods -A
   script:
     - echo "Loading the IMAGE_TAG from .env"
-    - cat .env  # Debugging step to print contents of .env file
-    - source .env  # Load the IMAGE_TAG from .env
-    - echo "Deploying backend with image tag ${IMAGE_TAG}"
-    - envsubst < ./manifest.yaml | kubectl apply -f -  # Use envsubst to replace variables in manifest.yaml
+    - source .env  # Load IMAGE_TAG from the artifact
+
+    # Verify if the deployment exists
+    - echo "Checking if the backend deployment exists..."
+    - DEPLOYMENT_EXISTS=$(kubectl get deployment backend-app --ignore-not-found)
+
+    # If the deployment exists, update the image; if not, apply the manifest
+    - |
+      if [ -n "$DEPLOYMENT_EXISTS" ]; then
+        echo "Backend deployment exists. Updating image to ${IMAGE_TAG}..."
+        kubectl set image deployment/backend-app backend=${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG} --record
+      else
+        echo "Backend deployment does not exist. Applying manifest.yaml..."
+        kubectl apply -f ./manifest.yaml
+      fi
   artifacts:
     paths:
       - .env  # Make sure .env is available as an artifact in this job
