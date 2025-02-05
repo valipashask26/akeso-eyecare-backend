@@ -2,6 +2,7 @@ image: saisk026/ubuntu-docker:20.04
 
 stages:
   - build
+  - deploy
 
 build_backend_dev:
   stage: build
@@ -20,5 +21,22 @@ build_backend_dev:
     - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
     - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev" 
+
+
+deploy_backend_dev:
+  stage: deploy
+  image: bitnami/kubectl:latest
+  environment:
+    name: development
+  tags:
+    - akeso-sk
+  before_script:
+    - echo "deploying the backend application to kubernetes"
+    - kubectl cluster-info
+  script:
+    - export IMAGE_TAG="$(date +%Y%m%d%H%M)"  # Re-generate the image tag in deploy stage
+    - envsubst < ./manifest.yaml | kubectl apply -f -
   rules:
     - if: $CI_COMMIT_BRANCH == "dev" 

@@ -1,8 +1,8 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: app-config
-  namespace: default
+  name: backend-config
+  namespace: ui-dev
 data:
   ATLAS_URI: "mongodb://mongodb-ui-dev:27017/employees"
   PORT: "5050"
@@ -11,31 +11,31 @@ data:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: nodejs-app
-  namespace: default
+  name: backend-app
+  namespace: ui-dev
   labels:
-    app: nodejs-app
+    app: backend-app
 spec:
   replicas: 2
   selector:
     matchLabels:
-      app: nodejs-app
+      app: backend-app
   template:
     metadata:
       labels:
-        app: nodejs-app
+        app: backend-app
     spec:
       securityContext:
         runAsNonRoot: true
         runAsUser: 1000
       containers:
-      - name: nodejs-container
-        image: your-dockerhub-username/nodejs-app:latest
+      - name: backend-app-container
+        image: "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"  # Dynamic image tag
         ports:
         - containerPort: 5050
         envFrom:
         - configMapRef:
-            name: app-config
+            name: backend-config
         resources:
           requests:
             memory: "128Mi"
@@ -61,10 +61,10 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nodejs-service
-  namespace: default
+  namespace: ui-dev
 spec:
   selector:
-    app: nodejs-app
+    app: backend-app
   ports:
     - protocol: TCP
       port: 80
