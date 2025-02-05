@@ -55,13 +55,14 @@ deploy_backend_dev:
 
     - echo "Checking if backend-app deployment exists"
     - kubectl get deployment backend-app -n docs-dev || DEPLOYMENT_EXISTS=false
-    - if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
-        echo "backend-app deployment not found, creating new deployment from manifest.yaml";
-        sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-dev:.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml;
-        kubectl apply -f manifest.yaml;
+    - |
+      if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
+        echo "backend-app deployment not found, creating new deployment from manifest.yaml"
+        sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-dev:.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml
+        kubectl apply -f manifest.yaml
       else
-        echo "backend-app deployment found, updating image";
-        kubectl set image deployment/backend-app -n docs-dev backend-app="akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}";
+        echo "backend-app deployment found, updating image"
+        kubectl set image deployment/backend-app -n docs-dev backend-app="akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}"
       fi
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
