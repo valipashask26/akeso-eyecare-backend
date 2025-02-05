@@ -38,7 +38,9 @@ deploy_backend_dev:
   before_script:
     - echo "Deploying the backend application to Kubernetes"
     - mkdir -p ~/.kube
-    - echo "$KUBECONFIG" | base64 -d > /root/.kube/config
+    - echo "$KUBECONFIG" | base64 -d > ~/.kube/config
+    - cat ~/.kube/config
+    - kubectl get pods -A
   script:
     - echo "Loading the IMAGE_TAG from .env"
     - cat .env  # Debugging step to print contents of .env file
