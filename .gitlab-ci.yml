@@ -21,9 +21,11 @@ build_backend_dev:
     - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
     - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+  artifacts:
+    reports:
+      dotenv: .env  # Store IMAGE_TAG in an artifact for use in the deploy stage
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" 
-
+    - if: $CI_COMMIT_BRANCH == "dev"
 
 deploy_backend_dev:
   stage: deploy
@@ -36,9 +38,9 @@ deploy_backend_dev:
     - echo "deploying the backend application to kubernetes"
     - mkdir ~/.kube
     - echo "$KUBECONFIG" | base64 -d > /root/.kube/config
-    - kubectl cluster-info
   script:
-    - export IMAGE_TAG="$(date +%Y%m%d%H%M)"  # Re-generate the image tag in deploy stage
+    - source .env  # Load the IMAGE_TAG from the artifact
+    - echo "Deploying backend with image tag ${IMAGE_TAG}"
     - envsubst < ./manifest.yaml | kubectl apply -f -
   rules:
-    - if: $CI_COMMIT_BRANCH == "dev" 
+    - if: $CI_COMMIT_BRANCH == "dev"
