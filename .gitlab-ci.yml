@@ -52,25 +52,34 @@ deploy_backend_dev:
 
 
   script:
-  - echo "Loading image tag from .env file"
-  - source .env
-  - echo "IMAGE_TAG=${IMAGE_TAG}"
+    - echo "Loading image tag from .env file"
+    - source .env
+    - echo "IMAGE_TAG=${IMAGE_TAG}"
 
-  - echo "Checking if backend-app deployment exists"
-  - kubectl get deployment backend-app -n ui-dev || DEPLOYMENT_EXISTS=false
-  - |
-    if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
-      echo "backend-app deployment not found, creating new deployment from manifest.yaml"
-      # Replace ${BRANCH} with 'dev' in the manifest.yaml file
-      sed -i "s|\${BRANCH}|dev|g" manifest.yaml
-      # Update the image URL with 'dev' for the 'dev' branch in the image tag
-      sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml
-      kubectl apply -f manifest.yaml
-    else
-      echo "backend-app deployment found, updating image"
-      # Update the image dynamically for the 'dev' branch
-      kubectl set image deployment/backend-app -n ui-dev backend-app-container="akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}"
-    fi
+    - echo "Checking if backend-app deployment exists"
+    - kubectl get deployment backend-app -n ui-dev || DEPLOYMENT_EXISTS=false
+    - |
+      if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
+        echo "backend-app deployment not found, creating new deployment from manifest.yaml"
+        sed -i "s|\${BRANCH}|dev|g" manifest.yaml
+        sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml
+        kubectl apply -f manifest.yaml
+      else
+        echo "backend-app deployment found, updating image"
+        kubectl set image deployment/backend-app -n ui-dev backend-app-container="akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}"
+      fi
+
+    # Check rollout status
+    - echo "Checking rollout status..."
+    - |
+      if ! kubectl rollout status deployment/backend-app -n ui-dev --timeout=60s; then
+        echo "Deployment failed, rolling back..."
+        kubectl rollout undo deployment/backend-app -n ui-dev
+        exit 1
+      else
+        echo "Deployment successful"
+      fi
+
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
 
@@ -122,25 +131,34 @@ deploy_backend_prod:
   - export KUBECONFIG=~/.kube/config
 
   script:
-  - echo "Loading image tag from .env file"
-  - source .env
-  - echo "IMAGE_TAG=${IMAGE_TAG}"
+    - echo "Loading image tag from .env file"
+    - source .env
+    - echo "IMAGE_TAG=${IMAGE_TAG}"
 
-  - echo "Checking if backend-app deployment exists"
-  - kubectl get deployment backend-app -n ui-prod || DEPLOYMENT_EXISTS=false
-  - |
-    if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
-      echo "backend-app deployment not found, creating new deployment from manifest.yaml"
-      # Replace ${BRANCH} with 'prod' in the manifest.yaml file
-      sed -i "s|\${BRANCH}|prod|g" manifest.yaml
-      # Update the image URL with 'prod' for the 'prod' branch in the image tag
-      sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-.*\"|image: \"akesosk.azurecr.io/akeso/backend-prod:${IMAGE_TAG}\"|" manifest.yaml
-      kubectl apply -f manifest.yaml
-    else
-      echo "backend-app deployment found, updating image"
-      # Update the image dynamically for the 'prod' branch
-      kubectl set image deployment/backend-app -n ui-prod backend-app-container="akesosk.azurecr.io/akeso/backend-prod:${IMAGE_TAG}"
-    fi
+    - echo "Checking if backend-app deployment exists"
+    - kubectl get deployment backend-app -n ui-prod || DEPLOYMENT_EXISTS=false
+    - |
+      if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
+        echo "backend-app deployment not found, creating new deployment from manifest.yaml"
+        sed -i "s|\${BRANCH}|prod|g" manifest.yaml
+        sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-.*\"|image: \"akesosk.azurecr.io/akeso/backend-prod:${IMAGE_TAG}\"|" manifest.yaml
+        kubectl apply -f manifest.yaml
+      else
+        echo "backend-app deployment found, updating image"
+        kubectl set image deployment/backend-app -n ui-prod backend-app-container="akesosk.azurecr.io/akeso/backend-prod:${IMAGE_TAG}"
+      fi
+
+    # Check rollout status
+    - echo "Checking rollout status..."
+    - |
+      if ! kubectl rollout status deployment/backend-app -n ui-prod --timeout=60s; then
+        echo "Deployment failed, rolling back..."
+        kubectl rollout undo deployment/backend-app -n ui-prod
+        exit 1
+      else
+        echo "Deployment successful"
+      fi
+
   rules:
     - if: $CI_COMMIT_BRANCH == "main"
       when: manual
