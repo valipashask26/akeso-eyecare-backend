@@ -16,6 +16,8 @@ stages:
 build_backend_dev:
   stage: build
   image: docker:20.10.7  # Use the same version as the service
+  variables:
+    DOCKER_HOST: tcp://docker:2375/
   environment:
     name: development
   tags:
@@ -26,7 +28,7 @@ build_backend_dev:
     - echo "IMAGE_TAG=${IMAGE_TAG}" > .env
     - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
     - docker login "${ACR_REGISTRY}" -u "${ACR_USERNAME}" -p "${ACR_PASSWORD}"
-    - docker build -t "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}" "${CI_PROJECT_DIR}"
+    - docker build -t "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
     - docker push "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
     - echo "Retagging the backend image to tag 2025"
     - docker tag "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}" "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
