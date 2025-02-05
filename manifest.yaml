@@ -5,19 +5,10 @@ metadata:
   namespace: ui-${BRANCH}
 data:
   PORT: "5050"
+  ATLAS_URI: mongodb://mongo-0.mongo,mongo-1.mongo:27017/employees
 
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: backend-secret
-  namespace: ui-${BRANCH}
-type: Opaque
-data:
-  ATLAS_URI: bW9uZ29kYjovL2VtcGxveWVlVXNlcjpFbVBsT3lFRUAxMjNAbW9uZ29kYi11aS1kZXY6MjcwMTcvZW1wbG95ZWVzCg==
 
-
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,14 +31,12 @@ spec:
         runAsUser: 1000
       containers:
       - name: backend-app-container
-        image: "akesosk.azurecr.io/akeso/backend-${BRANCH}}:${IMAGE_TAG}"  # Dynamic image tag
+        image: "akesosk.azurecr.io/akeso/backend-${BRANCH}:${IMAGE_TAG}"  # Dynamic image tag
         ports:
         - containerPort: 5050
         envFrom:
         - configMapRef:
-            name: backend-config
-        - secretRef:
-            name: backend-secret
+            name: backend-config  # Using ConfigMap instead of Secret
         resources:
           requests:
             memory: "128Mi"
@@ -72,6 +61,7 @@ spec:
 
 
 
+
 ---
 apiVersion: v1
 kind: Service
@@ -85,4 +75,4 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 5050
-  type: NodePort
+  type: ClusterIP
