@@ -30,7 +30,7 @@ spec:
         runAsUser: 1000
       containers:
       - name: backend-app-container
-        image: akesosk.azurecr.io/akeso/backend-dev:202502050854  # Dynamic image tag
+        image: "akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}"  # Dynamic image tag
         ports:
         - containerPort: 5050
         envFrom:

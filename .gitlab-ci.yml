@@ -1,23 +1,14 @@
 image: saisk026/ubuntu-docker:20.04
 
-variables:
-  DOCKER_DRIVER: overlay2
-  DOCKER_TLS_CERTDIR: ""
-  DOCKER_HOST: tcp://docker:2375/
-
-services:
-  - name: docker:20.10.7-dind  # Use a different version
-    command: ["--host=unix:///var/run/docker.sock", "--host=tcp://0.0.0.0:2375"]
-
 stages:
   - build
   - deploy
 
 build_backend_dev:
   stage: build
-  image: docker:20.10.7  # Use the same version as the service
-  variables:
-    DOCKER_HOST: tcp://docker:2375/
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""]
   environment:
     name: development
   tags:
@@ -26,54 +17,51 @@ build_backend_dev:
     - echo "Building backend docker image"
     - export IMAGE_TAG="$(date +%Y%m%d%H%M)"
     - echo "IMAGE_TAG=${IMAGE_TAG}" > .env
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
     - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
-    - docker login "${ACR_REGISTRY}" -u "${ACR_USERNAME}" -p "${ACR_PASSWORD}"
-    - docker build -t "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}" "${CI_PROJECT_DIR}"
-    - docker push "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
-    - echo "Retagging the backend image to tag 2025"
-    - docker tag "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}" "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
-    - docker push "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:2025"
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+  artifacts:
+    paths:
+      - .env  # Upload .env file as artifact to be used in deploy stage
 
-  # artifacts:
-  #   paths:
-  #     - .env  # Upload .env file as artifact to be used in deploy stage
+
+deploy_backend_dev:
+  stage: deploy
+  environment:
+    name: development
+  tags:
+    - akeso-sk
+  before_script:
+    - echo "Installing kubectl"
+    - apt-get update && apt-get install -y apt-transport-https gnupg2 curl
+    - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+    - echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+    - apt-get update && apt-get install -y kubectl
+    - echo "Installing Docker"
+    - apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+    - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+    - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+    - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+    - echo "Creating kubeconfig directory"
+    - mkdir -p /root/.kube
+    - echo "Adding kubeconfig file"
+    - echo "$KUBECONFIG" | base64 -d > /root/.kube/config
+
+  script:
+    - echo "Loading image tag from .env file"
+    - source .env
+    - echo "IMAGE_TAG=${IMAGE_TAG}"
+
+    - echo "Checking if backend-app deployment exists"
+    - kubectl get deployment backend-app -n docs-dev || DEPLOYMENT_EXISTS=false
+    - if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
+        echo "backend-app deployment not found, creating new deployment from manifest.yaml";
+        sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-dev:.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml;
+        kubectl apply -f manifest.yaml;
+      else
+        echo "backend-app deployment found, updating image";
+        kubectl set image deployment/backend-app -n docs-dev backend-app="akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}";
+      fi
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
-
-
-
-
-# deploy_backend_dev:
-#   stage: deploy
-#   image: saisk026/kubectl:v2
-#   environment:
-#     name: development
-#   tags:
-#     - akeso-sk
-#   before_script:
-#     - echo "Deploying the backend application to Kubernetes"
-#     - mkdir -p ~/.kube
-#     - echo "$KUBECONFIG" | base64 -d > ~/.kube/config
-#   script:
-#     - echo "Loading the IMAGE_TAG from .env"
-#     - source .env  # Load IMAGE_TAG from the artifact
-
-#     # Verify if the deployment exists
-#     - echo "Checking if the backend deployment exists..."
-#     - DEPLOYMENT_EXISTS=$(kubectl get deployment backend-app --ignore-not-found)
-
-#     # If the deployment exists, update the image; if not, apply the manifest
-#     - |
-#       if [ -n "$DEPLOYMENT_EXISTS" ]; then
-#         echo "Backend deployment exists. Updating image to ${IMAGE_TAG}..."
-#         kubectl set image deployment/backend-app backend=${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG} --record
-#       else
-#         echo "Backend deployment does not exist. Applying manifest.yaml..."
-#         kubectl apply -f ./manifest.yaml
-#       fi
-#   artifacts:
-#     paths:
-#       - .env  # Make sure .env is available as an artifact in this job
-#   rules:
-#     - if: $CI_COMMIT_BRANCH == "dev"
-
