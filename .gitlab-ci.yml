@@ -1,6 +1,4 @@
 image: saisk026/ubuntu-docker:20.04
-services:
-  - docker:dind
 
 stages:
   - build
@@ -9,7 +7,7 @@ build_backend_dev:
   stage: build
   image:
     name: gcr.io/kaniko-project/executor:debug
-    entrypoint: [""] 
+    entrypoint: [""]
   environment:
     name: development
   tags:
