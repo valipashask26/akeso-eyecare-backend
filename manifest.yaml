@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: backend-config
-  namespace: ui-dev-${BRANCH}
+  namespace: ui-${BRANCH}
 data:
   PORT: "5050"
 
@@ -11,7 +11,7 @@ apiVersion: v1
 kind: Secret
 metadata:
   name: backend-secret
-  namespace: ui-dev-${BRANCH}
+  namespace: ui-${BRANCH}
 type: Opaque
 data:
   ATLAS_URI: bW9uZ29kYjovL2VtcGxveWVlVXNlcjpFbVBsT3lFRUAxMjNAbW9uZ29kYi11aS1kZXY6MjcwMTcvZW1wbG95ZWVzCg==
@@ -22,7 +22,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: backend-app
-  namespace: ui-dev-${BRANCH}
+  namespace: ui-${BRANCH}
   labels:
     app: backend-app
 spec:
@@ -40,7 +40,7 @@ spec:
         runAsUser: 1000
       containers:
       - name: backend-app-container
-        image: "akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}"  # Dynamic image tag
+        image: "akesosk.azurecr.io/akeso/backend-${BRANCH}}:${IMAGE_TAG}"  # Dynamic image tag
         ports:
         - containerPort: 5050
         envFrom:
@@ -77,7 +77,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: nodejs-service
-  namespace: ui-dev-${BRANCH}
+  namespace: ui-${BRANCH}
 spec:
   selector:
     app: backend-app
