@@ -1,0 +1,103 @@
+image: saisk026/ubuntu-docker:20.04
+services:
+  - docker:dind
+
+stages:
+  - build
+  # - deploy
+
+build_backend_dev:
+  stage: build
+  image:
+    name: gcr.io/kaniko-project/executor:debug
+    entrypoint: [""] 
+  environment:
+    name: development
+  tags:
+    - akeso-sk
+  before_script:
+    - echo "Building backend docker image"
+    - export IMAGE_TAG="$(date +%Y%m%d%H%M)"
+  script:
+    - mkdir -p /kaniko/.docker
+    - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+    - echo "Pushing the backend image to ACR with tag ${IMAGE_TAG}"
+    - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+
+# deploy_frontend_dev:
+#   stage: deploy
+#   environment:
+#     name: development
+#   tags:
+#     - innerdata-runner
+#   before_script:
+#     - echo "Installing kubectl"
+#     - apt-get update && apt-get install -y apt-transport-https gnupg2 curl
+#     - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+#     - echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+#     - apt-get update && apt-get install -y kubectl
+#     - echo "Installing Docker"
+#     - apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+#     - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+#     - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+#     - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+#     - echo "Creating kubeconfig directory"
+#     - mkdir -p /root/.kube
+#     - echo "Adding kubeconfig file"
+#     - echo "$KUBECONFIG_CONTENT" | base64 -d > /root/.kube/config
+
+#   script:
+#     - echo "Rolling out Kubernetes deployment"
+#     - kubectl rollout restart deployment/innerdata-docs-deployment -n docs-dev
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "development"
+
+# build_frontend_prod:
+#   stage: build
+#   image:
+#     name: gcr.io/kaniko-project/executor:debug
+#     entrypoint: [""]
+#   environment:
+#     name: production
+#   tags:
+#     - innerdata-runner
+#   script:
+#     - echo "Building application image for Documentation"
+#     - mkdir -p /kaniko/.docker
+#     - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
+#     - echo "Pushing the innerdata Documentation image"
+#     - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_PROD_NAME}:${CI_COMMIT_REF_SLUG}"
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == "main"
+#       when: manual
+
+# deploy_frontend_prod:
+#   stage: deploy
+#   environment:
+#     name: production
+#   tags:
+#     - innerdata-runner
+#   before_script:
+#     - echo "Installing kubectl"
+#     - apt-get update && apt-get install -y apt-transport-https gnupg2 curl
+#     - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
+#     - echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+#     - apt-get update && apt-get install -y kubectl
+#     - echo "Installing Docker"
+#     - apt-get install -y apt-transport-https ca-certificates curl software-properties-common
+#     - curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
+#     - add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+#     - apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+#     - echo "Creating kubeconfig directory"
+#     - mkdir -p /root/.kube
+#     - echo "Adding kubeconfig file"
+#     - echo "$KUBECONFIG_CONTENT" | base64 -d > /root/.kube/config
+#   script:
+#     - echo "Rolling out Kubernetes deployment"
+#     - kubectl rollout restart deployment/innerdata-docs-prod -n documentation
+#   rules:
+#     - if: '$CI_COMMIT_REF_NAME == "master"'
+#       when: manual
