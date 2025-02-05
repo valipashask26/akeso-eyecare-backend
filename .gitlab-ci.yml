@@ -35,9 +35,8 @@ deploy_backend_dev:
   before_script:
   - echo "Installing kubectl"
   - curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-  - chmod +x kubectl
-  - mkdir /usr/local/bin/
-  - mv /kubectl /usr/local/bin/kubectl
+  - chmod +x ./kubectl
+  - mv ./kubectl /usr/local/bin/kubectl
   - echo "kubectl version installed:"
   - kubectl version --client
   - echo "Creating kubeconfig directory"
