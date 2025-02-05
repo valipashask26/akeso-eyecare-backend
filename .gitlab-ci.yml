@@ -16,6 +16,7 @@ build_backend_dev:
   before_script:
     - echo "Building backend docker image"
     - export IMAGE_TAG="$(date +%Y%m%d%H%M)"
+    - echo "IMAGE_TAG=${IMAGE_TAG}" > .env  # Ensure the IMAGE_TAG is saved in .env
   script:
     - mkdir -p /kaniko/.docker
     - echo "{\"auths\":{\"${ACR_REGISTRY}\":{\"auth\":\"$(printf "%s:%s" "${ACR_USERNAME}" "${ACR_PASSWORD}" | base64 | tr -d '\n')\"}}}" > /kaniko/.docker/config.json
@@ -23,9 +24,10 @@ build_backend_dev:
     - /kaniko/executor --context "${CI_PROJECT_DIR}" --dockerfile "${CI_PROJECT_DIR}/Dockerfile" --destination "${ACR_REGISTRY}/${CI_PROJECT_NAMESPACE}/${CI_PROJECT_DEV_NAME}:${IMAGE_TAG}"
   artifacts:
     reports:
-      dotenv: .env  # Store IMAGE_TAG in an artifact for use in the deploy stage
+      dotenv: .env  # Upload the .env file as an artifact
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
 
 deploy_backend_dev:
   stage: deploy
@@ -35,12 +37,14 @@ deploy_backend_dev:
   tags:
     - akeso-sk
   before_script:
-    - echo "deploying the backend application to kubernetes"
-    - mkdir ~/.kube
+    - echo "Deploying the backend application to Kubernetes"
+    - mkdir -p ~/.kube
     - echo "$KUBECONFIG" | base64 -d > /root/.kube/config
   script:
-    - source .env  # Load the IMAGE_TAG from the artifact
+    - echo "Loading the IMAGE_TAG from .env"
+    - source .env  # This loads the IMAGE_TAG from the .env artifact
     - echo "Deploying backend with image tag ${IMAGE_TAG}"
     - envsubst < ./manifest.yaml | kubectl apply -f -
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
