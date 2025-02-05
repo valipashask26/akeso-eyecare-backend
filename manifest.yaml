@@ -4,7 +4,7 @@ metadata:
   name: backend-config
   namespace: ui-dev
 data:
-  ATLAS_URI: "mongodb://mongodb-ui-dev:27017/employees"
+  ATLAS_URI: "mongodb://employeeUser:EmPlOyEE@123@mongodb-ui-dev:27017/employees"
   PORT: "5050"
 
 ---
@@ -30,7 +30,7 @@ spec:
         runAsUser: 1000
       containers:
       - name: backend-app-container
-        image: akesosk.azurecr.io/akeso/backend-dev:2025  # Dynamic image tag
+        image: akesosk.azurecr.io/akeso/backend-dev:202502050854  # Dynamic image tag
         ports:
         - containerPort: 5050
         envFrom:
@@ -55,6 +55,9 @@ spec:
             port: 5050
           initialDelaySeconds: 5
           periodSeconds: 5
+      imagePullSecrets:
+      - name: acr-registry2  # Using the secret to pull the image from the private registry
+
 
 ---
 apiVersion: v1
