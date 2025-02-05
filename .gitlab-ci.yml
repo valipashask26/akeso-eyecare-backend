@@ -25,6 +25,10 @@ build_backend_dev:
     paths:
       - .env  # Upload .env file as artifact to be used in deploy stage
 
+  rules:
+    - if: $CI_COMMIT_BRANCH == "dev"
+
+
 
 deploy_backend_dev:
   stage: deploy
@@ -58,6 +62,7 @@ deploy_backend_dev:
       if [ "$DEPLOYMENT_EXISTS" = "false" ]; then
         echo "backend-app deployment not found, creating new deployment from manifest.yaml"
         sed -i "s|image: \"akesosk.azurecr.io/akeso/backend-dev:.*\"|image: \"akesosk.azurecr.io/akeso/backend-dev:${IMAGE_TAG}\"|" manifest.yaml
+        sed -i "s|\${BRANCH}|dev|g" manifest.yaml
         kubectl apply -f manifest.yaml
       else
         echo "backend-app deployment found, updating image"
@@ -65,3 +70,4 @@ deploy_backend_dev:
       fi
   rules:
     - if: $CI_COMMIT_BRANCH == "dev"
+
