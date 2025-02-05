@@ -36,16 +36,17 @@ deploy_backend_dev:
   - echo "Installing kubectl"
   - apt-get update && apt-get install -y apt-transport-https gnupg2 curl
   - curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | apt-key add -
-  - echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | tee /etc/apt/sources.list.d/kubernetes.list
+  - echo "deb https://apt.kubernetes.io/ kubernetes-stable main" | tee /etc/apt/sources.list.d/kubernetes.list
   - apt-get update && apt-get install -y kubectl
   - echo "kubectl version installed:"
   - kubectl version --client
   - echo "Creating kubeconfig directory"
-  - mkdir -p ~/.kube
+  - mkdir -p $HOME/.kube
   - echo "Adding kubeconfig file"
-  - echo "$KUBECONFIG" | base64 -d > ~/.kube/config
+  - echo "$KUBECONFIG" | base64 -d > $HOME/.kube/config
   - echo "Setting kubeconfig environment variable"
-  - export KUBECONFIG=~/.kube/config
+  - export KUBECONFIG=$HOME/.kube/config
+
 
   script:
     - echo "Loading image tag from .env file"
