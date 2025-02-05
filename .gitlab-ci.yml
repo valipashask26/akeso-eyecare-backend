@@ -35,6 +35,7 @@ deploy_backend_dev:
   before_script:
     - echo "deploying the backend application to kubernetes"
     - kubectl cluster-info
+    - echo "$KUBECONFIG" | base64 -d > /root/.kube/config
   script:
     - export IMAGE_TAG="$(date +%Y%m%d%H%M)"  # Re-generate the image tag in deploy stage
     - envsubst < ./manifest.yaml | kubectl apply -f -
