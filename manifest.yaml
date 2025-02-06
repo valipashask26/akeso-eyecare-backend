@@ -5,7 +5,7 @@ metadata:
   namespace: ui-${BRANCH}
 data:
   PORT: "5050"
-  ATLAS_URI: "mongodb://root:gFsnkNhbMt@mongodb.ui-dev.svc.cluster.local:27017/employees"
+  ATLAS_URI: "mongodb://root:gFsnkNhbMt@mongodb.ui-${BRANCH}.svc.cluster.local:27017/employees"
 
 ---
 
