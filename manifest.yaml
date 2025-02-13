@@ -57,7 +57,7 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       imagePullSecrets:
-      - name: acr-registry2  # Using the secret to pull the image from the private registry
+      - name: acr-registry2  # Using the secret to pull the image from the private registry1
 
 
 
