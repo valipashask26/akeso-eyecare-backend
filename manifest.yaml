@@ -5,7 +5,8 @@ metadata:
   namespace: ui-${BRANCH}
 data:
   PORT: "5050"
-  ATLAS_URI: "mongodb://root:gFsnkNhbMt@mongodb.ui-${BRANCH}.svc.cluster.local:27017/employees"
+  ATLAS_URI: "mongodb://root:gFsnkNhbMt@mongodb.ui-${BRANCH}.svc.cluster.local:27017/employees"  # Dev value
+  # ATLAS_URI: "mongodb://root:gFsnkNhbMt@mongodb-prod.ui-${BRANCH}.svc.cluster.local:27017/employees"  # Main value (commented for context)
 
 ---
 
@@ -57,12 +58,10 @@ spec:
           initialDelaySeconds: 5
           periodSeconds: 5
       imagePullSecrets:
-      - name: acr-registry2  # Using the secret to pull the image from the private registry-1
-
-
-
+        - name: acr-registry2  # Using the secret to pull the image from the private registry-1
 
 ---
+
 apiVersion: v1
 kind: Service
 metadata:
